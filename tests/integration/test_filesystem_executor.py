@@ -337,10 +337,7 @@ def test_symlink_source_escape_is_blocked_after_resolution(tmp_path: Path) -> No
 
 
 def test_symlink_destination_parent_escape_is_blocked(tmp_path: Path) -> None:
-    if os.name == "nt":
-        link_is_directory = True
-    else:
-        link_is_directory = False
+    link_is_directory = os.name == "nt"
 
     allowed = tmp_path / "allowed"
     outside = tmp_path / "outside"
