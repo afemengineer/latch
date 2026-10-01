@@ -1,3 +1,4 @@
+# ruff: noqa: E501
 """Self-contained browser UI for the M9 hackathon demo."""
 
 DEMO_HTML = r"""<!doctype html>
