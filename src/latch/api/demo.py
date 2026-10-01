@@ -22,7 +22,7 @@ from latch.agent import (
 )
 from latch.core.capabilities import CapabilityRequest, ServiceResource
 from latch.core.evidence import EvidenceEvent, EvidenceLedger
-from latch.core.ids import SkillId, new_task_id
+from latch.core.ids import new_task_id
 from latch.core.information_flow import Sink, SinkKind
 from latch.core.permissions import PermissionConsequence, PermissionManager
 from latch.core.permissions.consequences import resource_scope_text, selector_scope_text
