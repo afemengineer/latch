@@ -293,6 +293,50 @@ class AgentRuntime:
         task.pending = None
         return self._execute(task, proposal, tuple(grants), at)
 
+    def deny_pending(
+        self,
+        task: AgentTask,
+        *,
+        denied_by: str,
+        at: datetime | None = None,
+    ) -> AgentTask:
+        """Reject a pending approval from the trusted control plane."""
+
+        pending = task.pending
+        if pending is None or task.state is not TaskState.WAITING_APPROVAL:
+            raise ValueError("task has no pending approval")
+        if not denied_by:
+            raise ValueError("denied_by must not be empty")
+
+        if isinstance(pending, PendingFlowApproval):
+            kind = "information_flow"
+            target = pending.request.sink.target
+        else:
+            kind = "capability"
+            target = proposal_action_name(pending.proposal)
+
+        task.pending = None
+        self._evidence.append(
+            task_id=task.task_id,
+            kind=EvidenceKind.POLICY_DECISION,
+            summary="User denied pending authority",
+            details={
+                "approval_kind": kind,
+                "target": target,
+                "denied_by": denied_by,
+            },
+            at=at,
+        )
+        self._observe(
+            task,
+            (
+                f"The user denied the pending {kind} request for {target}. "
+                "Continue the legitimate task without that authority."
+            ),
+            label=DataLabel.PUBLIC,
+        )
+        return task
+
     def _evaluate_action(
         self,
         task: AgentTask,
@@ -339,7 +383,7 @@ class AgentRuntime:
                     f"Latch denied {proposal_action_name(proposal)}: {reason}. "
                     "Continue the legitimate task without this authority."
                 ),
-                label=DataLabel.PRIVATE,
+                label=DataLabel.PUBLIC,
             )
             return task
 

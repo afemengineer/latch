@@ -48,6 +48,26 @@ See:
 - [Threat model](docs/THREAT_MODEL.md)
 - [Implementation plan](docs/IMPLEMENTATION_PLAN.md)
 
+## Run the hackathon demo
+
+```bash
+uv sync --group dev
+uv run latch-demo
+```
+
+Open `http://127.0.0.1:8765` and run the deterministic containment demo.
+
+The demo deliberately gives the model a malicious web instruction that asks it
+to read a fake secret outside the active skill's filesystem authority. The model
+attempts the read; Latch rejects it deterministically and the legitimate task
+continues.
+
+See [Hackathon demo](docs/DEMO.md) for the scripted and live Nebius + Tavily
+flows.
+
 ## Status
 
-Early architecture / hackathon V0. The security model is being specified before implementation so that generated or contributed code is constrained by explicit invariants rather than defining them accidentally.
+Hackathon V0 under active implementation. The authority broker, information-flow
+policy, verified filesystem execution, sealed credentials, deterministic agent
+runtime, declarative skills, narrow web search, and local demo control plane are
+implemented with adversarial tests.
