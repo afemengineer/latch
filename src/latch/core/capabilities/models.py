@@ -48,6 +48,14 @@ class CapabilityRequest:
 
 
 @dataclass(frozen=True, slots=True)
+class GrantUse:
+    """One concrete resource use to reserve against a grant atomically."""
+
+    grant_id: GrantId
+    request: CapabilityRequest
+
+
+@dataclass(frozen=True, slots=True)
 class Grant:
     grant_id: GrantId
     task_id: TaskId
