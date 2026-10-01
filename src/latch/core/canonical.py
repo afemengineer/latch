@@ -8,7 +8,7 @@ from collections.abc import Mapping
 from dataclasses import fields, is_dataclass
 from datetime import UTC, datetime
 from enum import Enum
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 
@@ -29,22 +29,25 @@ def _normalize(value: Any) -> Any:
         return str(value)
 
     if isinstance(value, Mapping):
+        mapping = cast(Mapping[object, object], value)
         normalized: dict[str, Any] = {}
-        for key, item in value.items():
+        for key, item in mapping.items():
             if not isinstance(key, str):
                 raise TypeError("canonical mappings require string keys")
             normalized[key] = _normalize(item)
         return {key: normalized[key] for key in sorted(normalized)}
 
     if isinstance(value, (set, frozenset)):
-        items = [_normalize(item) for item in value]
+        unordered = cast(set[object] | frozenset[object], value)
+        items = [_normalize(item) for item in unordered]
         return sorted(
             items,
             key=lambda item: json.dumps(item, sort_keys=True, separators=(",", ":")),
         )
 
     if isinstance(value, (tuple, list)):
-        return [_normalize(item) for item in value]
+        sequence = cast(tuple[object, ...] | list[object], value)
+        return [_normalize(item) for item in sequence]
 
     if isinstance(value, float) and not math.isfinite(value):
         raise ValueError("non-finite floats are not canonicalizable")
