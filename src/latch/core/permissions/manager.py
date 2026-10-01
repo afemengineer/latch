@@ -14,7 +14,6 @@ from latch.core.capabilities import (
     FilesystemResource,
     FilesystemResourceSelector,
     Grant,
-    ServiceResource,
     ServiceResourceSelector,
 )
 from latch.core.evidence import EvidenceKind, EvidenceLedger
@@ -133,7 +132,8 @@ class PermissionManager:
                         title="Outside this skill's authority ceiling",
                         detail=(
                             f"{envelope.display_name} is not permitted to request "
-                            f"{request.operation.value} for {resource_scope_text(request.resource)}. "
+                            f"{request.operation.value} for "
+                            f"{resource_scope_text(request.resource)}. "
                             "This cannot be approved from an incidental action prompt."
                         ),
                         risk=RiskLevel.PROHIBITED,
