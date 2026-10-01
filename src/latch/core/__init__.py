@@ -11,7 +11,15 @@ from latch.core.evidence import (
     render_timeline,
     verify_evidence_chain,
 )
-from latch.core.ids import EvidenceId, GrantId, RequestId, RuleId, TaskId
+from latch.core.ids import (
+    EvidenceId,
+    GrantId,
+    PermissionId,
+    RequestId,
+    RuleId,
+    SkillId,
+    TaskId,
+)
 from latch.core.information_flow import (
     DataRef,
     FlowDecision,
@@ -22,6 +30,16 @@ from latch.core.information_flow import (
     SinkKind,
     derive_data_ref,
     join_labels,
+)
+from latch.core.permissions import (
+    CapabilityCeilingRule,
+    CapabilityPermissionAssessment,
+    FlowPermissionAssessment,
+    PermissionEnvelope,
+    PermissionManager,
+    PermissionReason,
+    PermissionSnapshot,
+    StandingCapabilityPermission,
 )
 from latch.core.types import (
     DataLabel,
@@ -35,6 +53,8 @@ from latch.core.types import (
 
 __all__ = [
     "GENESIS_HASH",
+    "CapabilityCeilingRule",
+    "CapabilityPermissionAssessment",
     "ChainFailure",
     "ChainVerification",
     "DataLabel",
@@ -45,18 +65,26 @@ __all__ = [
     "EvidenceKind",
     "EvidenceLedger",
     "FlowDecision",
+    "FlowPermissionAssessment",
     "FlowPolicy",
     "FlowReason",
     "FlowRequest",
     "GrantId",
     "Operation",
     "PathPlatform",
+    "PermissionEnvelope",
+    "PermissionId",
+    "PermissionManager",
+    "PermissionReason",
+    "PermissionSnapshot",
     "PolicyEffect",
     "RequestId",
     "RiskLevel",
     "RuleId",
     "Sink",
     "SinkKind",
+    "SkillId",
+    "StandingCapabilityPermission",
     "TaskId",
     "TaskState",
     "calculate_event_hash",
