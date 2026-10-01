@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 from latch.core.evidence import EvidenceLedger, render_timeline
-from latch.core.ids import CredentialId, new_task_id
+from latch.core.ids import new_task_id
 from latch.providers.openai_compatible import JsonTransport, JsonValue
 from latch.secrets import CredentialVault, MemorySecretBackend, SecretRedactor
 from latch.tools.web_search import TavilySearchBackend
