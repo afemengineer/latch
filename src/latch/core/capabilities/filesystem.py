@@ -1,9 +1,9 @@
 """Filesystem resources and lexical selectors.
 
-This module deliberately performs *lexical* containment only. A future filesystem
-executor MUST resolve and re-check the authoritative on-disk target before access,
-including symlink/reparse-point handling. Policy matching alone is not a filesystem
-sandbox.
+This module deliberately performs lexical containment only. A filesystem
+executor MUST resolve and re-check the authoritative on-disk target before
+access, including symlink/reparse-point handling. Policy matching alone is not a
+filesystem sandbox.
 """
 
 from __future__ import annotations
@@ -90,7 +90,9 @@ class FilesystemResourceSelector:
     def exact(cls, resource: FilesystemResource) -> FilesystemResourceSelector:
         return cls(root=resource.path, platform=resource.platform, recursive=False)
 
-    def contains(self, resource: FilesystemResource) -> bool:
+    def contains(self, resource: object) -> bool:
+        if not isinstance(resource, FilesystemResource):
+            return False
         if resource.platform is not self.platform:
             return False
 

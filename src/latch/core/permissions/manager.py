@@ -8,10 +8,14 @@ from threading import RLock
 
 from latch.core.capabilities import (
     CapabilityRequest,
+    CapabilityResource,
+    CapabilitySelector,
     ConstraintSet,
     FilesystemResource,
     FilesystemResourceSelector,
     Grant,
+    ServiceResource,
+    ServiceResourceSelector,
 )
 from latch.core.evidence import EvidenceKind, EvidenceLedger
 from latch.core.ids import (
@@ -25,6 +29,7 @@ from latch.core.information_flow import FlowPolicy, FlowRequest, Sink
 from latch.core.permissions.consequences import (
     capability_consequence,
     flow_consequence,
+    selector_scope_text,
     sink_consequence,
     standing_permission_consequence,
 )
@@ -262,13 +267,13 @@ class PermissionManager:
         request: CapabilityRequest,
         *,
         approved_by: str,
-        selector: FilesystemResourceSelector | None = None,
+        selector: CapabilitySelector | None = None,
         constraints: ConstraintSet | None = None,
         at: datetime | None = None,
     ) -> StandingCapabilityPermission:
         """Add standing permission after an explicit trusted-user action."""
 
-        chosen_selector = selector or FilesystemResourceSelector.exact(request.resource)
+        chosen_selector = selector or self._exact_selector(request.resource)
         chosen_constraints = constraints or ConstraintSet(
             overwrite=False if not request.overwrite else None
         )
@@ -302,7 +307,7 @@ class PermissionManager:
                 "skill_id": str(skill_id),
                 "permission_id": str(permission.permission_id),
                 "operation": request.operation.value,
-                "scope": chosen_selector.root,
+                "scope": self._scope_text(chosen_selector),
                 "persistence": "standing",
             },
             at,
@@ -315,7 +320,7 @@ class PermissionManager:
         permission_id: PermissionId,
         *,
         operations: frozenset[Operation] | None = None,
-        selector: FilesystemResourceSelector | None = None,
+        selector: CapabilitySelector | None = None,
         constraints: ConstraintSet | None = None,
         approved_by: str,
         task_id: TaskId | None = None,
@@ -619,9 +624,14 @@ class PermissionManager:
 
     @staticmethod
     def _selector_within(
-        proposed: FilesystemResourceSelector,
-        ceiling: FilesystemResourceSelector,
+        proposed: CapabilitySelector,
+        ceiling: CapabilitySelector,
     ) -> bool:
+        if isinstance(proposed, ServiceResourceSelector):
+            return isinstance(ceiling, ServiceResourceSelector) and proposed == ceiling
+        if not isinstance(ceiling, FilesystemResourceSelector):
+            return False
+
         if proposed.platform is not ceiling.platform:
             return False
         if proposed == ceiling:
@@ -633,13 +643,11 @@ class PermissionManager:
 
         if not proposed.recursive:
             return True
-
         if not ceiling.recursive:
             return False
 
         # Recursive subscopes are trivially provable only when the wider ceiling
-        # has no exclusions. With exclusions, require exact selector equality
-        # rather than attempting unsafe glob-subset reasoning.
+        # has no exclusions. With exclusions, require exact selector equality.
         return not ceiling.exclude_globs
 
     @staticmethod
@@ -676,8 +684,16 @@ class PermissionManager:
         )
 
     @staticmethod
-    def _scope_text(selector: FilesystemResourceSelector) -> str:
-        return f"{selector.root}/**" if selector.recursive else selector.root
+    def _scope_text(selector: CapabilitySelector) -> str:
+        return selector_scope_text(selector)
+
+    @staticmethod
+    def _exact_selector(resource: CapabilityResource) -> CapabilitySelector:
+        if isinstance(resource, FilesystemResource):
+            return FilesystemResourceSelector.exact(resource)
+        if isinstance(resource, ServiceResource):
+            return ServiceResourceSelector.exact(resource)
+        raise TypeError("unsupported capability resource")
 
     def _permission(
         self,

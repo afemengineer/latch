@@ -12,6 +12,7 @@ class Operation(StrEnum):
     FILESYSTEM_COPY = "filesystem.copy"
     FILESYSTEM_MOVE = "filesystem.move"
     FILESYSTEM_RENAME = "filesystem.rename"
+    WEB_SEARCH = "web.search"
 
 
 class RiskLevel(StrEnum):

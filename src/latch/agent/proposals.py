@@ -46,6 +46,11 @@ class RenameProposal:
 
 
 @dataclass(frozen=True, slots=True)
+class WebSearchProposal:
+    query: str
+
+
+@dataclass(frozen=True, slots=True)
 class FinishProposal:
     message: str
 
@@ -56,6 +61,7 @@ type ActionProposal = (
     | CopyProposal
     | MoveProposal
     | RenameProposal
+    | WebSearchProposal
     | FinishProposal
 )
 
@@ -71,6 +77,8 @@ def proposal_operation(proposal: ActionProposal) -> Operation | None:
         return Operation.FILESYSTEM_MOVE
     if isinstance(proposal, RenameProposal):
         return Operation.FILESYSTEM_RENAME
+    if isinstance(proposal, WebSearchProposal):
+        return Operation.WEB_SEARCH
     return None
 
 
@@ -118,6 +126,9 @@ def parse_proposal(text: str) -> ActionProposal:
             source=_string(arguments, "source"),
             destination=_string(arguments, "destination"),
         )
+    if action == Operation.WEB_SEARCH.value:
+        _exact_keys(arguments, {"query"}, action)
+        return WebSearchProposal(query=_string(arguments, "query"))
     if action == "finish":
         _exact_keys(arguments, {"message"}, action)
         return FinishProposal(message=_string(arguments, "message"))

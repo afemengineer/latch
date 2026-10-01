@@ -7,8 +7,8 @@ from enum import StrEnum
 
 from latch.core.capabilities import (
     CapabilityRequest,
+    CapabilitySelector,
     ConstraintSet,
-    FilesystemResourceSelector,
 )
 from latch.core.ids import PermissionId, SkillId
 from latch.core.information_flow import FlowDecision, Sink
@@ -46,7 +46,7 @@ class PermissionConsequence:
 @dataclass(frozen=True, slots=True)
 class CapabilityCeilingRule:
     operations: frozenset[Operation]
-    selector: FilesystemResourceSelector
+    selector: CapabilitySelector
     constraints: ConstraintSet = field(default_factory=ConstraintSet)
 
     def __post_init__(self) -> None:
@@ -65,7 +65,7 @@ class CapabilityCeilingRule:
 class StandingCapabilityPermission:
     permission_id: PermissionId
     operations: frozenset[Operation]
-    selector: FilesystemResourceSelector
+    selector: CapabilitySelector
     constraints: ConstraintSet
     approved_by: str
 

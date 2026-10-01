@@ -6,8 +6,12 @@ from dataclasses import dataclass, field
 from datetime import datetime
 
 from latch.core.capabilities.filesystem import FilesystemResource, FilesystemResourceSelector
+from latch.core.capabilities.service import ServiceResource, ServiceResourceSelector
 from latch.core.ids import GrantId, RequestId, RuleId, TaskId, new_request_id
 from latch.core.types import DecisionOutcome, Operation, PolicyEffect
+
+type CapabilityResource = FilesystemResource | ServiceResource
+type CapabilitySelector = FilesystemResourceSelector | ServiceResourceSelector
 
 
 def _aware(value: datetime, name: str) -> None:
@@ -37,7 +41,7 @@ class ConstraintSet:
 class CapabilityRequest:
     task_id: TaskId
     operation: Operation
-    resource: FilesystemResource
+    resource: CapabilityResource
     bytes_requested: int = 0
     overwrite: bool = False
     request_id: RequestId = field(default_factory=new_request_id)
@@ -60,7 +64,7 @@ class Grant:
     grant_id: GrantId
     task_id: TaskId
     operations: frozenset[Operation]
-    selector: FilesystemResourceSelector
+    selector: CapabilitySelector
     constraints: ConstraintSet
     issued_by: str
     issued_at: datetime
@@ -94,7 +98,7 @@ class PolicyRule:
     rule_id: RuleId
     effect: PolicyEffect
     operations: frozenset[Operation]
-    selector: FilesystemResourceSelector
+    selector: CapabilitySelector
     constraints: ConstraintSet = field(default_factory=ConstraintSet)
     description: str = ""
 
