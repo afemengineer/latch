@@ -40,6 +40,10 @@ class PendingCapabilityApproval:
 type PendingApproval = PendingFlowApproval | PendingCapabilityApproval
 
 
+def _context_items() -> list[ContextItem]:
+    return []
+
+
 @dataclass(slots=True)
 class AgentTask:
     task_id: TaskId
@@ -47,7 +51,7 @@ class AgentTask:
     user_request: str
     user_ref: DataRef
     state: TaskState = TaskState.CREATED
-    observations: list[ContextItem] = field(default_factory=list)
+    observations: list[ContextItem] = field(default_factory=_context_items)
     turn_count: int = 0
     final_text: str | None = None
     failure_reason: str | None = None
