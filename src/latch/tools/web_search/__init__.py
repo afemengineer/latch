@@ -18,11 +18,11 @@ from latch.tools.web_search.models import (
 from latch.tools.web_search.redteam import RedTeamSearchBackend
 
 __all__ = [
+    "RedTeamSearchBackend",
     "SearchAuthorizationError",
     "SearchBackend",
     "SearchFlowApprovalRequired",
     "SearchFlowDenied",
-    "RedTeamSearchBackend",
     "SearchObservation",
     "SearchResponse",
     "SearchResult",
