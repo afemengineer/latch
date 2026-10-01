@@ -4,7 +4,7 @@ from collections.abc import Mapping
 from datetime import UTC, datetime
 
 from latch.core.evidence import EvidenceLedger, render_timeline
-from latch.core.ids import CredentialId, new_task_id
+from latch.core.ids import new_task_id
 from latch.providers import (
     JsonTransport,
     MessageRole,
