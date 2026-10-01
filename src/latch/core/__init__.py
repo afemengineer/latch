@@ -1,5 +1,16 @@
 """Model-independent trusted core primitives."""
 
+from latch.core.evidence import (
+    GENESIS_HASH,
+    ChainFailure,
+    ChainVerification,
+    EvidenceEvent,
+    EvidenceKind,
+    EvidenceLedger,
+    calculate_event_hash,
+    render_timeline,
+    verify_evidence_chain,
+)
 from latch.core.ids import EvidenceId, GrantId, RequestId, RuleId, TaskId
 from latch.core.information_flow import (
     DataRef,
@@ -23,10 +34,16 @@ from latch.core.types import (
 )
 
 __all__ = [
+    "GENESIS_HASH",
+    "ChainFailure",
+    "ChainVerification",
     "DataLabel",
     "DataRef",
     "DecisionOutcome",
+    "EvidenceEvent",
     "EvidenceId",
+    "EvidenceKind",
+    "EvidenceLedger",
     "FlowDecision",
     "FlowPolicy",
     "FlowReason",
@@ -42,6 +59,9 @@ __all__ = [
     "SinkKind",
     "TaskId",
     "TaskState",
+    "calculate_event_hash",
     "derive_data_ref",
     "join_labels",
+    "render_timeline",
+    "verify_evidence_chain",
 ]
