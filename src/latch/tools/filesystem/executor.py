@@ -226,7 +226,9 @@ class FilesystemExecutor:
             platform=self._platform,
         )
         if source_path.parent != destination_path.parent:
-            raise FilesystemOperationError(\n                "rename requires source and destination in one directory"\n            )
+            raise FilesystemOperationError(
+                "rename requires source and destination in one directory"
+            )
 
         return self._transfer_resolved(
             task_id=task_id,
