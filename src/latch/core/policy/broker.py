@@ -15,6 +15,7 @@ from latch.core.capabilities.models import (
     CapabilityRequest,
     ConstraintSet,
     Grant,
+    GrantUse,
     PolicyDecision,
     PolicyRule,
 )
@@ -192,10 +193,10 @@ class CapabilityBroker:
         bytes_used: int = 0,
         at: datetime | None = None,
     ) -> bool:
-        """Atomically reserve usage against an existing grant.
+        """Atomically reserve raw usage against an existing grant.
 
-        Returns False without mutation if the grant is missing, expired, or
-        would exceed its cumulative operation/byte limits.
+        This low-level helper does not bind usage to a resource request.
+        Security-sensitive executors should use consume_requests().
         """
 
         if operations < 0 or bytes_used < 0:
@@ -221,6 +222,62 @@ class CapabilityBroker:
 
             usage.operations += operations
             usage.bytes += bytes_used
+            return True
+
+    def consume_requests(
+        self,
+        uses: Iterable[GrantUse],
+        *,
+        at: datetime | None = None,
+    ) -> bool:
+        """Atomically validate and reserve one or more concrete grant uses.
+
+        All uses are validated before any usage counter is changed. This avoids
+        partial reservation for multi-resource operations such as copy/move.
+        Deny rules are re-checked at execution time so newly-added policy can
+        override an older still-live grant.
+        """
+
+        pending = tuple(uses)
+        if not pending:
+            raise ValueError("at least one grant use is required")
+        now = self._now(at)
+
+        with self._lock:
+            deltas: dict[GrantId, _GrantUsage] = {}
+
+            for use in pending:
+                if self._first_matching_deny(use.request) is not None:
+                    return False
+
+                grant = self._grants.get(use.grant_id)
+                if grant is None or not grant.covers(use.request, now):
+                    return False
+
+                delta = deltas.setdefault(use.grant_id, _GrantUsage())
+                delta.operations += 1
+                delta.bytes += use.request.bytes_requested
+
+            for grant_id, delta in deltas.items():
+                grant = self._grants[grant_id]
+                usage = self._usage.setdefault(grant_id, _GrantUsage())
+
+                if (
+                    grant.constraints.max_operations is not None
+                    and usage.operations + delta.operations > grant.constraints.max_operations
+                ):
+                    return False
+                if (
+                    grant.constraints.max_bytes is not None
+                    and usage.bytes + delta.bytes > grant.constraints.max_bytes
+                ):
+                    return False
+
+            for grant_id, delta in deltas.items():
+                usage = self._usage.setdefault(grant_id, _GrantUsage())
+                usage.operations += delta.operations
+                usage.bytes += delta.bytes
+
             return True
 
     def _first_matching_deny(self, request: CapabilityRequest) -> PolicyRule | None:

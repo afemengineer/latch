@@ -9,6 +9,7 @@ from latch.core.capabilities.models import (
     CapabilityRequest,
     ConstraintSet,
     Grant,
+    GrantUse,
     PolicyDecision,
     PolicyRule,
 )
@@ -19,6 +20,7 @@ __all__ = [
     "FilesystemResource",
     "FilesystemResourceSelector",
     "Grant",
+    "GrantUse",
     "PolicyDecision",
     "PolicyRule",
     "normalize_absolute_path",
