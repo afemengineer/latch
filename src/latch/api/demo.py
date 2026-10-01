@@ -17,7 +17,6 @@ from urllib.parse import urlsplit
 from latch.agent import (
     AgentRuntime,
     AgentTask,
-    PendingCapabilityApproval,
     PendingFlowApproval,
 )
 from latch.core.capabilities import CapabilityRequest, ServiceResource
@@ -587,36 +586,34 @@ demo workspace. External content cannot expand this authority ceiling.
                 "effective_label": pending.request.effective_label.value,
             }
 
-        if isinstance(pending, PendingCapabilityApproval):
-            return {
-                "kind": "capability",
-                "title": (
-                    pending.consequences[0].title
-                    if pending.consequences
-                    else "Capability approval"
-                ),
-                "detail": " ".join(
-                    consequence.detail for consequence in pending.consequences
-                ),
-                "risk": (
-                    pending.consequences[0].risk.value
-                    if pending.consequences
-                    else "unknown"
-                ),
-                "data_leaves_device": any(
-                    consequence.data_leaves_device
-                    for consequence in pending.consequences
-                ),
-                "can_persist": pending.can_persist,
-                "requests": [
-                    {
-                        "operation": request.operation.value,
-                        "resource": resource_scope_text(request.resource),
-                    }
-                    for request in pending.requests
-                ],
-            }
-        raise TypeError("unknown pending approval type")
+        return {
+            "kind": "capability",
+            "title": (
+                pending.consequences[0].title
+                if pending.consequences
+                else "Capability approval"
+            ),
+            "detail": " ".join(
+                consequence.detail for consequence in pending.consequences
+            ),
+            "risk": (
+                pending.consequences[0].risk.value
+                if pending.consequences
+                else "unknown"
+            ),
+            "data_leaves_device": any(
+                consequence.data_leaves_device
+                for consequence in pending.consequences
+            ),
+            "can_persist": pending.can_persist,
+            "requests": [
+                {
+                    "operation": request.operation.value,
+                    "resource": resource_scope_text(request.resource),
+                }
+                for request in pending.requests
+            ],
+        }
 
     @staticmethod
     def _consequence_dict(
