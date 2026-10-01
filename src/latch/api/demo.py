@@ -673,6 +673,7 @@ demo workspace. External content cannot expand this authority ceiling.
             or parsed.fragment
         ):
             raise ValueError(
-                "Nebius base URL must be an HTTPS origin/path without credentials, query, or fragment"
+                "Nebius base URL must be an HTTPS origin/path without credentials, "
+                "query, or fragment"
             )
         return normalized
