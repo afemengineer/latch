@@ -2,7 +2,13 @@
 
 from __future__ import annotations
 
-from latch.core.capabilities import CapabilityRequest, FilesystemResourceSelector
+from latch.core.capabilities import (
+    CapabilityRequest,
+    FilesystemResource,
+    FilesystemResourceSelector,
+    ServiceResource,
+    ServiceResourceSelector,
+)
 from latch.core.information_flow import FlowRequest, Sink, SinkKind
 from latch.core.permissions.models import (
     PermissionConsequence,
@@ -16,6 +22,7 @@ _OPERATION_RISK: dict[Operation, RiskLevel] = {
     Operation.FILESYSTEM_COPY: RiskLevel.REVERSIBLE_WRITE,
     Operation.FILESYSTEM_MOVE: RiskLevel.REVERSIBLE_WRITE,
     Operation.FILESYSTEM_RENAME: RiskLevel.REVERSIBLE_WRITE,
+    Operation.WEB_SEARCH: RiskLevel.EXTERNAL_SIDE_EFFECT,
 }
 
 _RISK_RANK: dict[RiskLevel, int] = {
@@ -28,30 +35,43 @@ _RISK_RANK: dict[RiskLevel, int] = {
 }
 
 
-def _scope_text(selector: FilesystemResourceSelector) -> str:
-    suffix = "/**" if selector.recursive else ""
-    return f"{selector.root}{suffix}"
+def selector_scope_text(
+    selector: FilesystemResourceSelector | ServiceResourceSelector,
+) -> str:
+    if isinstance(selector, FilesystemResourceSelector):
+        suffix = "/**" if selector.recursive else ""
+        return f"{selector.root}{suffix}"
+    return f"service:{selector.service_id}"
+
+
+def resource_scope_text(resource: FilesystemResource | ServiceResource) -> str:
+    if isinstance(resource, FilesystemResource):
+        return resource.path
+    return f"service:{resource.service_id}"
 
 
 def _worst_risk(operations: frozenset[Operation]) -> RiskLevel:
-    return max((_OPERATION_RISK[operation] for operation in operations), key=_RISK_RANK.__getitem__)
+    return max(
+        (_OPERATION_RISK[operation] for operation in operations),
+        key=_RISK_RANK.__getitem__,
+    )
 
 
 def capability_consequence(request: CapabilityRequest) -> PermissionConsequence:
     operation = request.operation
-    path = request.resource.path
+    scope = resource_scope_text(request.resource)
 
     if operation is Operation.FILESYSTEM_INSPECT:
         return PermissionConsequence(
             title="Inspect file metadata",
-            detail=f"Allows this task to inspect metadata for {path}. File contents are not read.",
+            detail=f"Allows this task to inspect metadata for {scope}. File contents are not read.",
             risk=RiskLevel.OBSERVE,
         )
     if operation is Operation.FILESYSTEM_READ:
         return PermissionConsequence(
             title="Read file contents",
             detail=(
-                f"Allows this task to read {path}. Any bytes returned remain subject to "
+                f"Allows this task to read {scope}. Any bytes returned remain subject to "
                 "Latch information-flow policy before they can reach a model or network."
             ),
             risk=RiskLevel.READ,
@@ -60,7 +80,7 @@ def capability_consequence(request: CapabilityRequest) -> PermissionConsequence:
         return PermissionConsequence(
             title="Copy file data",
             detail=(
-                f"Allows this task to participate in a verified copy involving {path}. "
+                f"Allows this task to participate in a verified copy involving {scope}. "
                 "Copy requires separate authority for both source and destination."
             ),
             risk=RiskLevel.REVERSIBLE_WRITE,
@@ -69,43 +89,60 @@ def capability_consequence(request: CapabilityRequest) -> PermissionConsequence:
         return PermissionConsequence(
             title="Move file data",
             detail=(
-                f"Allows this task to participate in a verified move involving {path}. "
+                f"Allows this task to participate in a verified move involving {scope}. "
                 "The original path may stop existing after success."
             ),
             risk=RiskLevel.REVERSIBLE_WRITE,
         )
-    return PermissionConsequence(
-        title="Rename a file",
-        detail=(
-            f"Allows this task to participate in a verified rename involving {path}. "
-            "The original filename may stop existing after success."
-        ),
-        risk=RiskLevel.REVERSIBLE_WRITE,
-    )
+    if operation is Operation.FILESYSTEM_RENAME:
+        return PermissionConsequence(
+            title="Rename a file",
+            detail=(
+                f"Allows this task to participate in a verified rename involving {scope}. "
+                "The original filename may stop existing after success."
+            ),
+            risk=RiskLevel.REVERSIBLE_WRITE,
+        )
+    if operation is Operation.WEB_SEARCH:
+        return PermissionConsequence(
+            title="Use a web search service",
+            detail=(
+                f"Allows this task to invoke {scope}. Search query text is independently "
+                "checked by information-flow policy before it may leave the device."
+            ),
+            risk=RiskLevel.EXTERNAL_SIDE_EFFECT,
+            data_leaves_device=True,
+        )
+    raise ValueError(f"unsupported operation: {operation}")
 
 
 def standing_permission_consequence(
     permission: StandingCapabilityPermission,
 ) -> PermissionConsequence:
     operations = ", ".join(sorted(operation.value for operation in permission.operations))
-    scope = _scope_text(permission.selector)
+    scope = selector_scope_text(permission.selector)
     risk = _worst_risk(permission.operations)
 
+    disclosure = ""
     if Operation.FILESYSTEM_READ in permission.operations:
-        disclosure = (
+        disclosure += (
             " Reading is still constrained by Latch information-flow policy; this permission "
             "does not itself authorize sending file contents elsewhere."
         )
-    else:
-        disclosure = ""
+    if Operation.WEB_SEARCH in permission.operations:
+        disclosure += (
+            " Search query data must separately pass information-flow policy for the exact "
+            "remote search sink."
+        )
 
     return PermissionConsequence(
-        title="Standing filesystem permission",
+        title="Standing capability permission",
         detail=(
             f"Allows {operations} within {scope} without asking again for each compliant "
             f"action.{disclosure}"
         ),
         risk=risk,
+        data_leaves_device=Operation.WEB_SEARCH in permission.operations,
     )
 
 

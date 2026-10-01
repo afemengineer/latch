@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from latch.agent.proposals import ActionProposal
-from latch.core.capabilities import CapabilityRequest
+from latch.core.capabilities import CapabilityRequest, Grant
 from latch.core.ids import SkillId, TaskId
 from latch.core.information_flow import DataRef, FlowRequest
 from latch.core.permissions import PermissionConsequence
@@ -27,6 +27,8 @@ class PendingFlowApproval:
     request: FlowRequest
     consequence: PermissionConsequence
     can_persist: bool
+    proposal: ActionProposal | None = None
+    grants: tuple[Grant, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)

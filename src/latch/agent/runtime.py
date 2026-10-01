@@ -22,21 +22,32 @@ from latch.agent.proposals import (
     ProposalParseError,
     ReadProposal,
     RenameProposal,
+    WebSearchProposal,
     parse_proposal,
     proposal_action_name,
     proposal_operation,
 )
-from latch.core.capabilities import CapabilityRequest, FilesystemResource, Grant
+from latch.core.capabilities import (
+    CapabilityRequest,
+    FilesystemResource,
+    Grant,
+    ServiceResource,
+)
 from latch.core.evidence import EvidenceKind, EvidenceLedger
 from latch.core.ids import SkillId, TaskId, new_task_id
 from latch.core.information_flow import DataRef, join_labels
-from latch.core.permissions import (
-    PermissionManager,
-    PermissionProhibited,
-)
-from latch.core.types import DataLabel, DecisionOutcome, TaskState
+from latch.core.permissions import PermissionManager, PermissionProhibited
+from latch.core.types import DataLabel, DecisionOutcome, Operation, TaskState
 from latch.providers import ModelProvider, ProviderError
+from latch.skills import SkillRegistry
 from latch.tools.filesystem import FilesystemExecutor, current_path_platform
+from latch.tools.web_search import (
+    SearchAuthorizationError,
+    SearchFlowApprovalRequired,
+    SearchFlowDenied,
+    WebSearchError,
+    WebSearchExecutor,
+)
 
 
 class AgentRuntime:
@@ -47,6 +58,8 @@ class AgentRuntime:
         permissions: PermissionManager,
         filesystem: FilesystemExecutor,
         evidence: EvidenceLedger,
+        web_search: WebSearchExecutor | None = None,
+        skills: SkillRegistry | None = None,
         context: ContextCompiler | None = None,
         max_turns: int = 16,
     ) -> None:
@@ -55,6 +68,8 @@ class AgentRuntime:
         self._provider = provider
         self._permissions = permissions
         self._filesystem = filesystem
+        self._web_search = web_search
+        self._skills = skills
         self._evidence = evidence
         self._context = context or ContextCompiler()
         self._max_turns = max_turns
@@ -144,7 +159,12 @@ class AgentRuntime:
             self._transition(task, TaskState.WAITING_APPROVAL)
             return task
 
-        provider_request = self._context.compile(task, snapshot)
+        provider_request = self._context.compile(
+            task,
+            snapshot,
+            available_operations=self._available_operations(),
+            skill_instructions=self._skill_instructions(task.skill_id),
+        )
         self._transition(task, TaskState.MODEL_DECISION)
         try:
             response = self._provider.generate(provider_request)
@@ -223,8 +243,10 @@ class AgentRuntime:
                     at=at,
                 )
             task.pending = None
-            self._transition(task, TaskState.OBSERVED)
-            return task
+            if pending.proposal is None:
+                self._transition(task, TaskState.OBSERVED)
+                return task
+            return self._execute(task, pending.proposal, pending.grants, at)
 
         grants: list[Grant] = []
         for request in pending.requests:
@@ -353,6 +375,9 @@ class AgentRuntime:
         grants: tuple[Grant, ...],
         at: datetime | None,
     ) -> AgentTask:
+        if isinstance(proposal, WebSearchProposal):
+            return self._execute_web_search(task, proposal, grants, at)
+
         self._transition(task, TaskState.EXECUTING)
 
         if isinstance(proposal, InspectProposal):
@@ -417,10 +442,97 @@ class AgentRuntime:
                 f"{result.destination.path}."
             )
         else:
-            raise TypeError("finish proposals are not executable actions")
+            raise TypeError("unsupported executable proposal")
 
         self._transition(task, TaskState.VERIFYING)
         task.observations.append(ContextItem(text=text, ref=ref))
+        self._transition(task, TaskState.OBSERVED)
+        return task
+
+    def _execute_web_search(
+        self,
+        task: AgentTask,
+        proposal: WebSearchProposal,
+        grants: tuple[Grant, ...],
+        at: datetime | None,
+    ) -> AgentTask:
+        if self._web_search is None:
+            self._observe(
+                task,
+                "Latch cannot execute web.search because no search executor is configured.",
+                label=DataLabel.PRIVATE,
+            )
+            return task
+
+        query_ref = self._derived_query_ref(task)
+        flow_request = self._web_search.flow_request(query_ref=query_ref)
+        flow = self._permissions.assess_flow(
+            task.skill_id,
+            task.task_id,
+            flow_request,
+        )
+        if flow.outcome is DecisionOutcome.DENY:
+            self._evidence.append(
+                task_id=task.task_id,
+                kind=EvidenceKind.FLOW_DECISION,
+                summary="Web search query flow denied before execution",
+                details={
+                    "sink": self._web_search.sink.target,
+                    "label": query_ref.label.value,
+                    "reason": flow.decision.reason.value,
+                },
+                at=at,
+            )
+            self._observe(
+                task,
+                (
+                    "Latch denied sending the proposed web-search query because "
+                    f"{flow.decision.reason.value}."
+                ),
+                label=DataLabel.PRIVATE,
+            )
+            return task
+        if flow.outcome is DecisionOutcome.NEEDS_APPROVAL:
+            task.pending = PendingFlowApproval(
+                request=flow_request,
+                consequence=flow.consequence,
+                can_persist=flow.can_persist,
+                proposal=proposal,
+                grants=grants,
+            )
+            self._transition(task, TaskState.WAITING_APPROVAL)
+            return task
+
+        self._transition(task, TaskState.EXECUTING)
+        try:
+            result = self._web_search.search(
+                task_id=task.task_id,
+                skill_id=task.skill_id,
+                grant_id=grants[0].grant_id,
+                query=proposal.query,
+                query_ref=query_ref,
+                at=at,
+            )
+        except SearchFlowApprovalRequired:
+            task.pending = PendingFlowApproval(
+                request=flow_request,
+                consequence=flow.consequence,
+                can_persist=flow.can_persist,
+                proposal=proposal,
+                grants=grants,
+            )
+            self._transition(task, TaskState.WAITING_APPROVAL)
+            return task
+        except (SearchFlowDenied, SearchAuthorizationError, WebSearchError) as exc:
+            self._observe(
+                task,
+                f"Latch web search failed safely: {exc}",
+                label=DataLabel.PRIVATE,
+            )
+            return task
+
+        self._transition(task, TaskState.VERIFYING)
+        task.observations.append(ContextItem(text=result.text, ref=result.ref))
         self._transition(task, TaskState.OBSERVED)
         return task
 
@@ -432,6 +544,18 @@ class AgentRuntime:
         operation = proposal_operation(proposal)
         if operation is None:
             raise ValueError("finish does not require capabilities")
+
+        if isinstance(proposal, WebSearchProposal):
+            if self._web_search is None:
+                raise ValueError("web search executor is unavailable")
+            return (
+                CapabilityRequest(
+                    task_id=task_id,
+                    operation=Operation.WEB_SEARCH,
+                    resource=ServiceResource(self._web_search.service_id),
+                    bytes_requested=len(proposal.query.encode("utf-8")),
+                ),
+            )
 
         platform = current_path_platform()
         if isinstance(proposal, (InspectProposal, ReadProposal)):
@@ -459,6 +583,35 @@ class AgentRuntime:
             )
 
         raise ValueError("unsupported proposal type")
+
+    def _derived_query_ref(self, task: AgentTask) -> DataRef:
+        label = join_labels(
+            task.user_ref.label,
+            *(item.ref.label for item in task.observations),
+        )
+        return DataRef(
+            data_id=f"search-query:{uuid4().hex}",
+            label=label,
+            origin="model-derived:web-search-query",
+        )
+
+    def _available_operations(self) -> frozenset[Operation]:
+        operations = {
+            Operation.FILESYSTEM_INSPECT,
+            Operation.FILESYSTEM_READ,
+            Operation.FILESYSTEM_COPY,
+            Operation.FILESYSTEM_MOVE,
+            Operation.FILESYSTEM_RENAME,
+        }
+        if self._web_search is not None:
+            operations.add(Operation.WEB_SEARCH)
+        return frozenset(operations)
+
+    def _skill_instructions(self, skill_id: SkillId) -> str:
+        if self._skills is None:
+            return ""
+        definition = self._skills.get(skill_id)
+        return definition.instructions if definition is not None else ""
 
     def _observe(self, task: AgentTask, text: str, *, label: DataLabel) -> None:
         effective = join_labels(task.user_ref.label, label)

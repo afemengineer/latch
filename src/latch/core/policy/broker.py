@@ -10,15 +10,18 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from threading import RLock
 
-from latch.core.capabilities.filesystem import FilesystemResourceSelector
+from latch.core.capabilities.filesystem import FilesystemResource, FilesystemResourceSelector
 from latch.core.capabilities.models import (
     CapabilityRequest,
+    CapabilityResource,
+    CapabilitySelector,
     ConstraintSet,
     Grant,
     GrantUse,
     PolicyDecision,
     PolicyRule,
 )
+from latch.core.capabilities.service import ServiceResourceSelector
 from latch.core.ids import GrantId, RuleId, TaskId, new_grant_id
 from latch.core.types import DecisionOutcome, PolicyEffect
 
@@ -147,7 +150,7 @@ class CapabilityBroker:
         request: CapabilityRequest,
         *,
         approved_by: str,
-        selector: FilesystemResourceSelector | None = None,
+        selector: CapabilitySelector | None = None,
         constraints: ConstraintSet | None = None,
         ttl: timedelta | None = None,
         at: datetime | None = None,
@@ -159,7 +162,7 @@ class CapabilityBroker:
         """
 
         now = self._now(at)
-        chosen_selector = selector or FilesystemResourceSelector.exact(request.resource)
+        chosen_selector = selector or self._exact_selector(request.resource)
         chosen_constraints = constraints or ConstraintSet()
         chosen_ttl = ttl or self._default_grant_ttl
 
@@ -279,6 +282,12 @@ class CapabilityBroker:
                 usage.bytes += delta.bytes
 
             return True
+
+    @staticmethod
+    def _exact_selector(resource: CapabilityResource) -> CapabilitySelector:
+        if isinstance(resource, FilesystemResource):
+            return FilesystemResourceSelector.exact(resource)
+        return ServiceResourceSelector.exact(resource)
 
     def _first_matching_deny(self, request: CapabilityRequest) -> PolicyRule | None:
         for rule in self._rules.values():

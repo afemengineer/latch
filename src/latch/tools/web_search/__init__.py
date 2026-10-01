@@ -1,0 +1,31 @@
+"""Narrow, IFC-gated web search."""
+
+from latch.tools.web_search.backends import (
+    SearchBackend,
+    StaticSearchBackend,
+    TavilySearchBackend,
+)
+from latch.tools.web_search.executor import WebSearchExecutor
+from latch.tools.web_search.models import (
+    SearchAuthorizationError,
+    SearchFlowApprovalRequired,
+    SearchFlowDenied,
+    SearchObservation,
+    SearchResponse,
+    SearchResult,
+    WebSearchError,
+)
+
+__all__ = [
+    "SearchAuthorizationError",
+    "SearchBackend",
+    "SearchFlowApprovalRequired",
+    "SearchFlowDenied",
+    "SearchObservation",
+    "SearchResponse",
+    "SearchResult",
+    "StaticSearchBackend",
+    "TavilySearchBackend",
+    "WebSearchError",
+    "WebSearchExecutor",
+]

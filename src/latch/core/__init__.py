@@ -1,5 +1,6 @@
 """Model-independent trusted core primitives."""
 
+from latch.core.capabilities import ServiceResource, ServiceResourceSelector
 from latch.core.evidence import (
     GENESIS_HASH,
     ChainFailure,
@@ -83,6 +84,8 @@ __all__ = [
     "RequestId",
     "RiskLevel",
     "RuleId",
+    "ServiceResource",
+    "ServiceResourceSelector",
     "Sink",
     "SinkKind",
     "SkillId",

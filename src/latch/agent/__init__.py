@@ -16,6 +16,7 @@ from latch.agent.proposals import (
     ProposalParseError,
     ReadProposal,
     RenameProposal,
+    WebSearchProposal,
     parse_proposal,
 )
 from latch.agent.runtime import AgentRuntime
@@ -35,5 +36,6 @@ __all__ = [
     "ProposalParseError",
     "ReadProposal",
     "RenameProposal",
+    "WebSearchProposal",
     "parse_proposal",
 ]
