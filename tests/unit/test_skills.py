@@ -1,3 +1,4 @@
+# ruff: noqa: I001
 import pytest
 
 from latch.core.capabilities import FilesystemResourceSelector, ServiceResourceSelector
