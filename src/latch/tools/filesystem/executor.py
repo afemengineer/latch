@@ -407,22 +407,28 @@ class FilesystemExecutor:
         at: datetime | None,
     ) -> None:
         for use in uses:
+            resource = use.request.resource
+            if not isinstance(resource, FilesystemResource):
+                raise FilesystemAuthorizationError(
+                    "filesystem executor received a non-filesystem capability"
+                )
+
             grant = self._broker.get_grant(use.grant_id)
             if grant is None:
                 self._authorization_denied(
                     task_id,
                     operation,
-                    use.request.resource,
+                    resource,
                     "grant_missing",
                     at,
                 )
                 raise FilesystemAuthorizationError("grant does not exist")
 
-            if not grant.selector.contains(use.request.resource):
+            if not grant.selector.contains(resource):
                 self._authorization_denied(
                     task_id,
                     operation,
-                    use.request.resource,
+                    resource,
                     "resolved_scope_escape",
                     at,
                 )
