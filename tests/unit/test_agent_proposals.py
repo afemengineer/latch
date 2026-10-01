@@ -37,7 +37,7 @@ def test_parse_finish_proposal() -> None:
 
 
 def test_authority_bearing_extra_fields_are_rejected() -> None:
-    with pytest.raises(ProposalParseError, match="extra=.*grant_id"):
+    with pytest.raises(ProposalParseError, match=r"extra=.*grant_id"):
         parse_proposal(
             json.dumps(
                 {
@@ -52,7 +52,7 @@ def test_authority_bearing_extra_fields_are_rejected() -> None:
 
 
 def test_top_level_extra_fields_are_rejected() -> None:
-    with pytest.raises(ProposalParseError, match="extra=.*permission"):
+    with pytest.raises(ProposalParseError, match=r"extra=.*permission"):
         parse_proposal(
             json.dumps(
                 {
