@@ -10,6 +10,7 @@ RequestId = NewType("RequestId", str)
 RuleId = NewType("RuleId", str)
 SkillId = NewType("SkillId", str)
 PermissionId = NewType("PermissionId", str)
+CredentialId = NewType("CredentialId", str)
 
 
 def _new_id(prefix: str) -> str:
@@ -42,3 +43,7 @@ def new_skill_id() -> SkillId:
 
 def new_permission_id() -> PermissionId:
     return PermissionId(_new_id("permission"))
+
+
+def new_credential_id() -> CredentialId:
+    return CredentialId(_new_id("credential"))

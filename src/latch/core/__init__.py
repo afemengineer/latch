@@ -12,6 +12,7 @@ from latch.core.evidence import (
     verify_evidence_chain,
 )
 from latch.core.ids import (
+    CredentialId,
     EvidenceId,
     GrantId,
     PermissionId,
@@ -57,6 +58,7 @@ __all__ = [
     "CapabilityPermissionAssessment",
     "ChainFailure",
     "ChainVerification",
+    "CredentialId",
     "DataLabel",
     "DataRef",
     "DecisionOutcome",

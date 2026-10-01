@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from hashlib import sha256
@@ -119,13 +119,18 @@ def verify_evidence_chain(events: Iterable[EvidenceEvent]) -> ChainVerification:
 class EvidenceLedger:
     """Append-only process-local ledger.
 
-    M3 deliberately provides no edit/delete API. A later persistence adapter
-    may support explicit user-requested history deletion as a separate storage
-    operation, but security events are never silently edited in place.
+    An optional deterministic text sanitizer provides defense-in-depth against
+    accidental secret logging. Security code must still avoid passing SECRET
+    payloads to evidence in the first place; sanitization is not declassification.
     """
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        *,
+        text_sanitizer: Callable[[str], str] | None = None,
+    ) -> None:
         self._events: list[EvidenceEvent] = []
+        self._text_sanitizer = text_sanitizer
         self._lock = RLock()
 
     @property
@@ -148,7 +153,9 @@ class EvidenceLedger:
         if occurred_at.tzinfo is None or occurred_at.utcoffset() is None:
             raise ValueError("evidence timestamps must be timezone-aware")
 
-        normalized_details = normalize_evidence_details(details)
+        safe_summary = self._sanitize(summary)
+        safe_details = self._sanitize_details(details)
+        normalized_details = normalize_evidence_details(safe_details)
 
         with self._lock:
             sequence = len(self._events)
@@ -160,7 +167,7 @@ class EvidenceLedger:
                 sequence=sequence,
                 occurred_at=occurred_at,
                 kind=kind,
-                summary=summary,
+                summary=safe_summary,
                 details=normalized_details,
                 previous_hash=previous_hash,
             )
@@ -170,7 +177,7 @@ class EvidenceLedger:
                 sequence=sequence,
                 occurred_at=occurred_at,
                 kind=kind,
-                summary=summary,
+                summary=safe_summary,
                 details=normalized_details,
                 previous_hash=previous_hash,
                 event_hash=event_hash,
@@ -190,3 +197,20 @@ class EvidenceLedger:
 
     def verify(self) -> ChainVerification:
         return verify_evidence_chain(self.snapshot())
+
+    def _sanitize(self, value: str) -> str:
+        if self._text_sanitizer is None:
+            return value
+        return self._text_sanitizer(value)
+
+    def _sanitize_details(
+        self,
+        details: Mapping[str, EvidenceScalar] | None,
+    ) -> Mapping[str, EvidenceScalar] | None:
+        if details is None or self._text_sanitizer is None:
+            return details
+
+        sanitized: dict[str, EvidenceScalar] = {}
+        for key, value in details.items():
+            sanitized[key] = self._sanitize(value) if isinstance(value, str) else value
+        return sanitized

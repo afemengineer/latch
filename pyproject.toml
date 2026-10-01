@@ -12,6 +12,11 @@ license = { text = "Apache-2.0" }
 authors = [{ name = "afemengineer" }]
 dependencies = []
 
+[project.optional-dependencies]
+os-secrets = [
+  "keyring>=25.6",
+]
+
 [dependency-groups]
 dev = [
   "pytest>=8.3",
