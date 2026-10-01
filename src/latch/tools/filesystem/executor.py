@@ -21,9 +21,9 @@ from latch.core.capabilities import (
 )
 from latch.core.evidence import EvidenceKind, EvidenceLedger
 from latch.core.ids import GrantId, TaskId
-from latch.core.information_flow import DataRef, join_labels
+from latch.core.information_flow import DataRef
 from latch.core.policy import CapabilityBroker
-from latch.core.types import DataLabel, Operation, PathPlatform
+from latch.core.types import Operation, PathPlatform
 from latch.tools.filesystem.labels import FilesystemLabelStore
 from latch.tools.filesystem.models import (
     FileInspection,
@@ -226,7 +226,7 @@ class FilesystemExecutor:
             platform=self._platform,
         )
         if source_path.parent != destination_path.parent:
-            raise FilesystemOperationError("rename requires source and destination in one directory")
+            raise FilesystemOperationError(\n                "rename requires source and destination in one directory"\n            )
 
         return self._transfer_resolved(
             task_id=task_id,
