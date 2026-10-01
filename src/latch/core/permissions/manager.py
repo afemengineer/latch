@@ -29,6 +29,7 @@ from latch.core.information_flow import FlowPolicy, FlowRequest, Sink
 from latch.core.permissions.consequences import (
     capability_consequence,
     flow_consequence,
+    resource_scope_text,
     selector_scope_text,
     sink_consequence,
     standing_permission_consequence,
@@ -132,7 +133,7 @@ class PermissionManager:
                         title="Outside this skill's authority ceiling",
                         detail=(
                             f"{envelope.display_name} is not permitted to request "
-                            f"{request.operation.value} for {request.resource.path}. "
+                            f"{request.operation.value} for {resource_scope_text(request.resource)}. "
                             "This cannot be approved from an incidental action prompt."
                         ),
                         risk=RiskLevel.PROHIBITED,
@@ -243,7 +244,7 @@ class PermissionManager:
             {
                 "skill_id": str(skill_id),
                 "operation": request.operation.value,
-                "resource": request.resource.path,
+                "resource": resource_scope_text(request.resource),
                 "persistence": "task_only",
             },
             at,
@@ -691,9 +692,7 @@ class PermissionManager:
     def _exact_selector(resource: CapabilityResource) -> CapabilitySelector:
         if isinstance(resource, FilesystemResource):
             return FilesystemResourceSelector.exact(resource)
-        if isinstance(resource, ServiceResource):
-            return ServiceResourceSelector.exact(resource)
-        raise TypeError("unsupported capability resource")
+        return ServiceResourceSelector.exact(resource)
 
     def _permission(
         self,
