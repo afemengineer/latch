@@ -8,6 +8,8 @@ GrantId = NewType("GrantId", str)
 EvidenceId = NewType("EvidenceId", str)
 RequestId = NewType("RequestId", str)
 RuleId = NewType("RuleId", str)
+SkillId = NewType("SkillId", str)
+PermissionId = NewType("PermissionId", str)
 
 
 def _new_id(prefix: str) -> str:
@@ -32,3 +34,11 @@ def new_request_id() -> RequestId:
 
 def new_rule_id() -> RuleId:
     return RuleId(_new_id("rule"))
+
+
+def new_skill_id() -> SkillId:
+    return SkillId(_new_id("skill"))
+
+
+def new_permission_id() -> PermissionId:
+    return PermissionId(_new_id("permission"))
