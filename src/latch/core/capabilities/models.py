@@ -30,9 +30,7 @@ class ConstraintSet:
     def allows_request(self, request: CapabilityRequest) -> bool:
         if self.max_bytes is not None and request.bytes_requested > self.max_bytes:
             return False
-        if self.overwrite is False and request.overwrite:
-            return False
-        return True
+        return not (self.overwrite is False and request.overwrite)
 
 
 @dataclass(frozen=True, slots=True)

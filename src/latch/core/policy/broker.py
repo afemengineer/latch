@@ -254,12 +254,10 @@ class CapabilityBroker:
             and usage.operations >= grant.constraints.max_operations
         ):
             return False
-        if (
+        return not (
             grant.constraints.max_bytes is not None
             and usage.bytes + request.bytes_requested > grant.constraints.max_bytes
-        ):
-            return False
-        return True
+        )
 
     def _grant_for_rule(
         self, request: CapabilityRequest, rule: PolicyRule, now: datetime
