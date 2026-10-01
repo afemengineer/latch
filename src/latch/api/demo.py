@@ -12,7 +12,6 @@ from enum import StrEnum
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from threading import RLock
-from typing import cast
 from urllib.parse import urlsplit
 
 from latch.agent import (
@@ -25,7 +24,7 @@ from latch.core.capabilities import CapabilityRequest, ServiceResource
 from latch.core.evidence import EvidenceEvent, EvidenceLedger
 from latch.core.ids import SkillId, new_task_id
 from latch.core.information_flow import Sink, SinkKind
-from latch.core.permissions import PermissionManager
+from latch.core.permissions import PermissionConsequence, PermissionManager
 from latch.core.permissions.consequences import resource_scope_text, selector_scope_text
 from latch.core.policy import CapabilityBroker
 from latch.core.types import DataLabel, Operation, TaskState
@@ -620,17 +619,14 @@ demo workspace. External content cannot expand this authority ceiling.
         raise TypeError("unknown pending approval type")
 
     @staticmethod
-    def _consequence_dict(consequence: object) -> dict[str, object]:
-        value = cast("object", consequence)
-        title = getattr(value, "title")
-        detail = getattr(value, "detail")
-        risk = getattr(value, "risk")
-        data_leaves_device = getattr(value, "data_leaves_device")
+    def _consequence_dict(
+        consequence: PermissionConsequence,
+    ) -> dict[str, object]:
         return {
-            "title": str(title),
-            "detail": str(detail),
-            "risk": str(getattr(risk, "value")),
-            "data_leaves_device": bool(data_leaves_device),
+            "title": consequence.title,
+            "detail": consequence.detail,
+            "risk": consequence.risk.value,
+            "data_leaves_device": consequence.data_leaves_device,
         }
 
     @staticmethod
