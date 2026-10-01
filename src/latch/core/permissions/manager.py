@@ -29,7 +29,6 @@ from latch.core.permissions.consequences import (
     standing_permission_consequence,
 )
 from latch.core.permissions.models import (
-    CapabilityCeilingRule,
     CapabilityMenuEntry,
     CapabilityPermissionAssessment,
     FlowMenuEntry,
@@ -648,12 +647,22 @@ class PermissionManager:
         proposed: ConstraintSet,
         ceiling: ConstraintSet,
     ) -> bool:
-        if ceiling.max_operations is not None:
-            if proposed.max_operations is None or proposed.max_operations > ceiling.max_operations:
-                return False
-        if ceiling.max_bytes is not None:
-            if proposed.max_bytes is None or proposed.max_bytes > ceiling.max_bytes:
-                return False
+        if (
+            ceiling.max_operations is not None
+            and (
+                proposed.max_operations is None
+                or proposed.max_operations > ceiling.max_operations
+            )
+        ):
+            return False
+        if (
+            ceiling.max_bytes is not None
+            and (
+                proposed.max_bytes is None
+                or proposed.max_bytes > ceiling.max_bytes
+            )
+        ):
+            return False
         return not (ceiling.overwrite is False and proposed.overwrite is not False)
 
     @staticmethod
