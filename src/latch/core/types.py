@@ -43,6 +43,7 @@ class TaskState(StrEnum):
     MODEL_DECISION = "model_decision"
     ACTION_PROPOSED = "action_proposed"
     POLICY_EVALUATION = "policy_evaluation"
+    WAITING_APPROVAL = "waiting_approval"
     EXECUTING = "executing"
     VERIFYING = "verifying"
     OBSERVED = "observed"
