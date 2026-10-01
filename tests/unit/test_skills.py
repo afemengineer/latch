@@ -1,9 +1,6 @@
 import pytest
 
-from latch.core.capabilities import (
-    FilesystemResourceSelector,
-    ServiceResourceSelector,
-)
+from latch.core.capabilities import FilesystemResourceSelector, ServiceResourceSelector
 from latch.core.types import Operation, PathPlatform
 from latch.skills import SkillManifestError, load_skill_text
 
