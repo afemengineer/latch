@@ -34,7 +34,7 @@ from latch.core.permissions import (
     PermissionManager,
     PermissionProhibited,
 )
-from latch.core.types import DataLabel, DecisionOutcome, Operation, TaskState
+from latch.core.types import DataLabel, DecisionOutcome, TaskState
 from latch.providers import ModelProvider, ProviderError
 from latch.tools.filesystem import FilesystemExecutor, current_path_platform
 
